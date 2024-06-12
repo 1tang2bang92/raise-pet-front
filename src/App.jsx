@@ -1,90 +1,84 @@
-import { useState, useEffect, useRef} from 'react'
-
-import './App.css'
+import { useState, useEffect, useRef } from 'react';
+import './App.css';
+import * as mobilenet from '@tensorflow-models/mobilenet'; // mobilenet 모듈을 import 해줍니다.
 
 function App() {
-  
-  const [isModelLoading, setIsMoedlLoading] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(false);
   const [imageURL, setImageURL] = useState(null);
   const [model, setModel] = useState(null);
-  const [results, setResults] = useState ([]);
+  const [results, setResults] = useState([]);
   const imageRef = useRef();
 
   const loadModel = async () => {
-  setIsModelLoading(true);
-  try {
-    const model = await mobilenet.load();
-    setModel(model);
-    setIsModelLoading(false);
-  } catch (error) {
+    setIsModelLoading(true);
+    try {
+      const loadedModel = await mobilenet.load();
+      setModel(loadedModel);
+      setIsModelLoading(false);
+    } catch (error) {
       console.log(error);
       setIsModelLoading(false);
     }
-};
+  };
 
-useEffect(() => {
-  loadModel();
-}, []);
+  useEffect(() => {
+    loadModel();
+  }, []);
 
-if (isModelLoading) {
-  return <h1 style={{textAlign: "center"}}>로딩중</h1>;
-}
+  const uploadImage = (e) => {
+    const { files } = e.target;
+    if (files.length > 0) {
+      const url = URL.createObjectURL(files[0]);
+      setImageURL(url);
+    } else {
+      setImageURL(null);
+    }
+  };
 
+  const detectImage = async () => {
+    if (model && imageRef.current) {
+      const predictions = await model.classify(imageRef.current);
+      setResults(predictions);
+      console.log('results', predictions);
+    }
+  };
 
- const uploadImage=(e) => {
-  const {files} = e.target;
-  if (files.length >0) {
-    const url = URL.createObjectURL(files[0]);
-    console.log("files", files)
-    console.log("url", url)
-    setImageURL (url);
-  } else {
-    setImageURL (null);
+  if (isModelLoading) {
+    return <h1 style={{ textAlign: "center" }}>로딩중</h1>;
   }
 
- }  
-
-  const hdetectImage= async ()=>{
-
-    const results = await model.classify(imageRef.current);
-    setResult (results);
-    console.log ('results',resulrs)
-  }
   return (
     <>
-     <h1>GPT서비스 기반 유기동물 추천 플랫폼</h1>
-     <input
-      type='file'
-      accept='image/*'
-      onChange={uploadImage}></input>
-
-
+      <h1>GPT서비스 기반 새로운 시작을 기다리는 동물 추천 플랫폼</h1>
+      <input
+        type='file'
+        accept='image/*'
+        onChange={uploadImage}
+      />
       <div>
-       {imageURL &&
-       <img
-       src = {imageURL}
-       ref = {imageRef}
-       width = "300px"
-       height = "300px"/>}
-
+        {imageURL && (
+          <div>
+            <img
+              src={imageURL}
+              ref={imageRef}
+              alt="Uploaded"
+              width="300px"
+              height="300px"
+            />
+            <button onClick={detectImage}>분류</button>
+          </div>
+        )}
       </div>
-      {imageURL &&
-      <button
-      onClick={hdetectImage}>정보찾기</button>  
-}  
-
-{results.length > 0 &&
-        results.map(
-          (result, index) => (
-            <p key={index}>
-              {result.className} <br />
-              {Math.floor(100 * result.probability)} %
-            </p>
-          )
-        )
-      }
+      {results.length > 0 && (
+        results.map((result, index) => (
+          <p key={index}>
+            {result.className} <br />
+            {Math.floor(result.probability * 100)}%
+          </p>
+        ))
+      )}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
